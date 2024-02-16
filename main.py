@@ -8,7 +8,6 @@ import time
 import os
 import inspect
 from datetime import datetime
-import random
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -16,15 +15,16 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-from utils.slug import *
+from utils.slug import slug
+from utils.get_file import get_file, get_image
 
-imagesFolder = f"imagens-{str(int(time.time()))}"
-if not os.path.exists(imagesFolder):
-    os.makedirs(imagesFolder)
+images_folder = f"imagens-{str(int(time.time()))}"
+if not os.path.exists(images_folder):
+    os.makedirs(images_folder)
 
-downloadsFolder = f"downloads-{str(int(time.time()))}"
-if not os.path.exists(downloadsFolder):
-    os.makedirs(downloadsFolder)
+downloads_folder = f"downloads-{str(int(time.time()))}"
+if not os.path.exists(downloads_folder):
+    os.makedirs(downloads_folder)
 
 opener = urllib.request.build_opener()
 opener.addheaders = [(
@@ -32,61 +32,6 @@ opener.addheaders = [(
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
 )]
 urllib.request.install_opener(opener)
-
-def GetLocalImage(imageUrl, imageTitle, folder="produto", isCover=False):
-    imageExtension = imageUrl.split(".").pop()
-
-    if len(imageExtension) > 4 or not imageExtension:
-        response = urllib.request.urlopen(imageUrl)
-        content_type = response.headers.get("Content-Type")
-        imageExtension = content_type.split("/").pop()
-
-    imageExtension = "jpg" if imageExtension == "jpeg" else imageExtension
-    imageFilename = (
-        ("cover-" if isCover else "post-")
-        + slug(imageTitle)
-        + "-"
-        + str(int(time.time()))
-        + str(random.randint(0, 1000))
-        + "."
-        + imageExtension
-    )
-    try:
-        urllib.request.urlretrieve(
-            f"{baseURL}{imageUrl}", f"{imagesFolder}/{imageFilename}"
-        )
-        print("Success")
-        todayYear = str(datetime.today().year)
-        todayMonth = str(datetime.today().month)
-        imageFilename = (
-            f'2/{folder}/{todayYear}/{todayMonth if todayMonth > "9" else "0" + todayMonth}/{imageFilename}')
-
-    except:
-        print("Image not found")
-        imageFilename = (
-            f'2/{folder}/{todayYear}/{todayMonth if todayMonth > "9" else "0" + todayMonth}/default.png')
-    return imageFilename
-
-
-def GetDownloadFile(file_url, file_title, folder="downloads"):
-    file_extension = file_url.split(".").pop()
-
-    # 2/downloads/2024/02/download-teste-7a68f04ea6.pdf
-    filename = (
-        f'download-{slug(file_title)}-{str(int(time.time()))}{str(random.randint(0, 1000))}.{file_extension}')
-    try:
-        urllib.request.urlretrieve(
-            f"{baseURL}{file_url}", f"{downloadsFolder}/{filename}")
-        print("Success")
-        todayYear = str(datetime.today().year)
-        todayMonth = str(datetime.today().month)
-        filename = (
-            f'2/{folder}/{todayYear}/{todayMonth if todayMonth > "9" else "0" + todayMonth}/{filename}')
-
-    except:
-        print("Não foi possível baixar o arquivo")
-    return filename
-
 
 def CreateDrescription(title):
     description = EscapeQuotes(title) + " - " + EscapeQuotes(baseDescription)
@@ -219,7 +164,7 @@ def SetBold(value):
 def ContentToLocal(content, images, title):
     contentImagesSrc = []
     for image in images:
-        contentImagesSrc.append(GetLocalImage(image, title, folder="produto"))
+        contentImagesSrc.append(get_image(image, slug(title), images_folder))
         # try:
         #     contentImagesSrc.append(GetLocalImage(image, title, folder = 'produto'))
         # except:
@@ -434,7 +379,7 @@ for link in tqdm(linksToCrawl):
 
         if len(filesLinks) > 0:
             for i in range(len(filesLinks)):
-                currentFile = GetDownloadFile(filesLinks[i], postTitle)
+                currentFile = get_file(filesLinks[i], slug(postTitle), downloads_folder)
                 if currentFile:
                     download_id += 1
                     download_list.append(download_id)
@@ -484,7 +429,7 @@ VALUES (
   {categoryId},
   '{slug(postTitle)}',
   '{EscapeQuotes(postTitle).title()}',
-  '{GetLocalImage(postImage, postTitle, page, True)}',
+  '{get_image(postImage, slug(postTitle), images_folder, page, True)}',
   '{CreateDrescription(postTitle)}',
   '{EscapeQuotes(ClearTags(postContentImages))}',
   '{postDate}',
