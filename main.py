@@ -4,7 +4,6 @@ import urllib.request
 import urllib.parse
 from tqdm import tqdm
 import re
-import unicodedata
 import time
 import os
 import inspect
@@ -16,6 +15,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+
+from utils.slug import *
 
 imagesFolder = f"imagens-{str(int(time.time()))}"
 if not os.path.exists(imagesFolder):
@@ -32,30 +33,6 @@ opener.addheaders = [(
 )]
 urllib.request.install_opener(opener)
 
-
-def TitleToURL(url):
-    replaceWithSpace = ["a", "á", "à", "ante", "até", "após", "de", "desde", "em", "entre", "com", "para", "por", "perante", "sem", "sob", "sobre",
-                        "na", "no", "e", "do", "da", "de", "(", ")", "'", '"', ".", ",", "/", "°", "º", "ª", "-", "*", "&", ";", "–", "?", "!", "#", "|", "“", "”", "$",]
-    replaceWithoutSpace = ["  ", " ", ",", "--", "/", '"', "`", "´", "'", ".", ":",
-                           "º", "°", "(", ")", "*", "&", ";", "?", "!", "#", "ª", "|", "“", "”", "$",]
-    regexSyntax = re.compile(
-        "(\s+)(" + ("|".join(map(re.escape, replaceWithSpace))) + ")(\s+|$)")
-    url = " ".join(url.split())
-    url = regexSyntax.sub("-", url.lower())
-    regexSyntax = re.compile(
-        "(" + ("|".join(map(re.escape, replaceWithoutSpace))) + ")"
-    )
-    url = regexSyntax.sub("-", url.lower())
-    url = " ".join(url.split("-"))
-    url = "-".join(url.split())
-    url = "".join((
-        c
-        for c in unicodedata.normalize("NFD", url)
-        if unicodedata.category(c) != "Mn"
-    ))
-    return url
-
-
 def GetLocalImage(imageUrl, imageTitle, folder="produto", isCover=False):
     imageExtension = imageUrl.split(".").pop()
 
@@ -67,7 +44,7 @@ def GetLocalImage(imageUrl, imageTitle, folder="produto", isCover=False):
     imageExtension = "jpg" if imageExtension == "jpeg" else imageExtension
     imageFilename = (
         ("cover-" if isCover else "post-")
-        + TitleToURL(imageTitle)
+        + slug(imageTitle)
         + "-"
         + str(int(time.time()))
         + str(random.randint(0, 1000))
@@ -96,7 +73,7 @@ def GetDownloadFile(file_url, file_title, folder="downloads"):
 
     # 2/downloads/2024/02/download-teste-7a68f04ea6.pdf
     filename = (
-        f'download-{TitleToURL(file_title)}-{str(int(time.time()))}{str(random.randint(0, 1000))}.{file_extension}')
+        f'download-{slug(file_title)}-{str(int(time.time()))}{str(random.randint(0, 1000))}.{file_extension}')
     try:
         urllib.request.urlretrieve(
             f"{baseURL}{file_url}", f"{downloadsFolder}/{filename}")
@@ -477,7 +454,7 @@ for link in tqdm(linksToCrawl):
                             {download_id},
                             2,
                             {downloadCat},
-                            '{TitleToURL('Catálogo: '+postTitle)}',
+                            '{slug('Catálogo: '+postTitle)}',
                             '{'Catálogo: '+postTitle}',
                             '{'Catálogo: '+postTitle}',
                             '{currentFile}',
@@ -505,7 +482,7 @@ INSERT INTO `dr_produtos`(
 VALUES (
   2,
   {categoryId},
-  '{TitleToURL(postTitle)}',
+  '{slug(postTitle)}',
   '{EscapeQuotes(postTitle).title()}',
   '{GetLocalImage(postImage, postTitle, page, True)}',
   '{CreateDrescription(postTitle)}',
