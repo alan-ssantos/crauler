@@ -28,10 +28,12 @@ if not os.path.exists(downloads_folder):
     os.makedirs(downloads_folder)
 
 opener = urllib.request.build_opener()
-opener.addheaders = [(
-    "User-agent",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
-)]
+opener.addheaders = [
+    (
+        "User-agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
+    )
+]
 urllib.request.install_opener(opener)
 
 
@@ -57,8 +59,20 @@ def SplitPopStrip(str):
 
 
 def formatDate(date):
-    monthList = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
-                 "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",]
+    monthList = [
+        "janeiro",
+        "fevereiro",
+        "março",
+        "abril",
+        "maio",
+        "junho",
+        "julho",
+        "agosto",
+        "setembro",
+        "outubro",
+        "novembro",
+        "dezembro",
+    ]
     day = date[0]
     # month = monthList.index(date[1].lower()) + 1
     # month = ('0' if month < 10 else '') + str(month)
@@ -88,23 +102,22 @@ def ContentToLocal(content, images, title):
     print("Images - " + str(len(images)))
     for i, image in enumerate(originalImages):
         content = content.replace(
-            image, f'<img src="doutor/uploads/{contentImagesSrc[i]} title="{title}" alt="{title}">')
+            image, f'<img src="doutor/uploads/{contentImagesSrc[i]} title="{title}" alt="{title}">'
+        )
 
     return content
 
 
-currentDirectory = os.path.dirname(
-    os.path.abspath(inspect.getfile(inspect.currentframe())))
+currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 urlFile = open(os.path.join(currentDirectory, "hrefs.txt"), "r")
 linksToCrawl = []
 for line in urlFile:
-    if (line.find('#') == -1):
+    if line.find("#") == -1:
         linksToCrawl.append(line.rstrip())
 
 urlFile.close()
 
-queriesOutput = open(os.path.join(
-    currentDirectory, "crauler-result/queries.sql"), "w+", encoding="utf-8")
+queriesOutput = open(os.path.join(currentDirectory, "crauler-result/queries.sql"), "w+", encoding="utf-8")
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--headless")
@@ -150,8 +163,12 @@ for link in tqdm(linksToCrawl):
 
     # ---- CAPA DO PRODUTO
     try:
-        postImage = (WebDriverWait(driver, 30).until(EC.presence_of_element_located(
-            (By.CSS_SELECTOR, ".project-slider img.preload-me"))).get_attribute("src").strip())
+        postImage = (
+            WebDriverWait(driver, 30)
+            .until(EC.presence_of_element_located((By.CSS_SELECTOR, ".project-slider img.preload-me")))
+            .get_attribute("src")
+            .strip()
+        )
 
         postImage = re.sub(r"\?.*", "", postImage)
         print(postImage)
@@ -161,8 +178,12 @@ for link in tqdm(linksToCrawl):
 
     # ---- TÍTULO DO PRODUTO
     try:
-        postTitle = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "h1.entry-title"))).get_attribute("innerText").strip()
+        postTitle = (
+            WebDriverWait(driver, 10)
+            .until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.entry-title")))
+            .get_attribute("innerText")
+            .strip()
+        )
     except:
         print("Title not found")
 
@@ -206,7 +227,8 @@ for link in tqdm(linksToCrawl):
     # --- CONTEÚDO DO PRODUTO
     try:
         postContent = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content > *")))
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content > *"))
+        )
 
         postContentArray = []
         for descElements in postContent:
@@ -220,7 +242,8 @@ for link in tqdm(linksToCrawl):
     postContentImages = False
     try:
         postContentImagesSelector = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content img")))
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content img"))
+        )
 
         postContentImages = []
         for images in postContentImagesSelector:
@@ -229,18 +252,19 @@ for link in tqdm(linksToCrawl):
     except:
         print("Images in content not found")
 
-    postContentImages = (postContent if not postContentImages else ContentToLocal(
-        postContent, postContentImages, postTitle))
+    postContentImages = (
+        postContent if not postContentImages else ContentToLocal(postContent, postContentImages, postTitle)
+    )
 
     # ---- BREVE DESCRIÇÃO DO PRODUTO
     try:
         breveDescriptionContent = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "")))
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ""))
+        )
 
         breveDescriptionContentArray = []
         for descElements in breveDescriptionContent:
-            breveDescriptionContentArray.append(
-                descElements.get_attribute("outerHTML"))
+            breveDescriptionContentArray.append(descElements.get_attribute("outerHTML"))
 
         breveContent = "".join(breveDescriptionContentArray)
     except:
@@ -282,8 +306,9 @@ for link in tqdm(linksToCrawl):
 
     # ---- DOWNLOADS
     try:
-        files = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located(
-            (By.CSS_SELECTOR, ".project-content a[href*='.pdf']")))
+        files = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content a[href*='.pdf']"))
+        )
         filesLinks = []
 
         for file in files:
@@ -291,13 +316,12 @@ for link in tqdm(linksToCrawl):
 
         if len(filesLinks) > 0:
             for i in range(len(filesLinks)):
-                currentFile = get_file(
-                    filesLinks[i], slug(postTitle), downloads_folder)
+                currentFile = get_file(filesLinks[i], slug(postTitle), downloads_folder)
                 if currentFile:
                     download_id += 1
                     download_list.append(download_id)
                     queriesOutput.write(
-                        f'''INSERT INTO `dr_downloads` (
+                        f"""INSERT INTO `dr_downloads` (
                             `dow_id`,
                             `user_empresa`,
                             `cat_parent`,
@@ -318,7 +342,8 @@ for link in tqdm(linksToCrawl):
                             '{currentFile}',
                             '{postDate}',
                             2
-                          );\n''')
+                          );\n"""
+                    )
     except Exception as e:
         print(f"Exception:\n{e}")
         print("Nenhum arquivo para download foi encontrado no produto.")
