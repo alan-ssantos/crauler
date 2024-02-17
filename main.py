@@ -17,12 +17,13 @@ from selenium.webdriver.common.by import By
 
 from utils.slug import slug
 from utils.get_file import get_file, get_image
+from utils.html_handler import clear_tags
 
-images_folder = f"imagens-{str(int(time.time()))}"
+images_folder = f"crauler-result/imagens-{str(int(time.time()))}"
 if not os.path.exists(images_folder):
     os.makedirs(images_folder)
 
-downloads_folder = f"downloads-{str(int(time.time()))}"
+downloads_folder = f"crauler-result/downloads-{str(int(time.time()))}"
 if not os.path.exists(downloads_folder):
     os.makedirs(downloads_folder)
 
@@ -33,100 +34,10 @@ opener.addheaders = [(
 )]
 urllib.request.install_opener(opener)
 
+
 def CreateDrescription(title):
     description = EscapeQuotes(title) + " - " + EscapeQuotes(baseDescription)
     return description[:145] + "... Saiba mais."
-
-
-def ClearTags(content):
-    content = re.sub(
-        r"<div(.*?)class=\"wp-video\">(.|\n)*<\/div><\/div>", "", content)
-
-    regexSystax = re.compile(
-        '(\s(style|class|id|role|aria-label|data-ri|cellpadding|cellspacing|height|width|border|itemprop)=")(.*?")')
-    content = regexSystax.sub("", content)
-
-    # regexSystax = re.compile('\s+(?=<*\<)')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('(&#[0-9a-zA-z]*\;)')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('<[^/>][^>]*><\/[^>]+>')
-    # regexSystax = re.compile('<[^>!(td|i)][^>]*><\/[^>]+>')
-    # content = regexSystax.sub('', content)
-
-    regexSystax = re.compile("<figure.*>")
-    content = regexSystax.sub("", content)
-
-    regexSystax = re.compile("<\/figure>")
-    content = regexSystax.sub("", content)
-
-    regexSystax = re.compile("\r?\n|\r|\t")
-    content = regexSystax.sub("", content)
-
-    regexSystax = re.compile("</img>")
-    content = regexSystax.sub("", content)
-
-    # regexSystax = re.compile('<h2>(.*?)</h2>')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('<p><strong>')
-    # content = regexSystax.sub('<h2>', content)
-
-    # regexSystax = re.compile('<\/strong><\/p>')
-    # content = regexSystax.sub('</h2>', content)
-
-    # regexSystax = re.compile('<br\/><\/h2>')
-    # content = regexSystax.sub('</h2>', content)
-
-    # regexSystax = re.compile('<strong>')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('<\/strong>')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('<span\stitle(.*?\">)')
-    # content = regexSystax.sub('', content)
-
-    # regexSystax = re.compile('<span[^>]*>')
-    # content = regexSystax.sub('', content)
-
-    regexSystax = re.compile("<table[^>]*>")
-    content = regexSystax.sub('<table class="table">', content)
-
-    # regexSystax = re.compile('<\/span>')
-    # content = regexSystax.sub('', content)
-
-    regexSystax = re.compile("<(\/)?h1[^>]*>")
-    content = regexSystax.sub("<\g<1>h2>", content)
-
-    regexSystax = re.compile("<a[^>]*>")
-    content = regexSystax.sub("<span>", content)
-
-    regexSystax = re.compile("<label[^>]*>")
-    content = regexSystax.sub("<p>", content)
-
-    regexSystax = re.compile("<br>")
-    content = regexSystax.sub("</p><p>", content)
-
-    # regexSystax = re.compile('<a ')
-    # content = regexSystax.sub('<a target="_blank" rel="nofollow" ', content)
-
-    regexSystax = re.compile("<\/a>")
-    content = regexSystax.sub("</span>", content)
-
-    regexSystax = re.compile("<\/label>")
-    content = regexSystax.sub("</p>", content)
-
-    content = (
-        content.replace("<p>&nbsp;</p>", "")
-        .replace("<p> </p>", "")
-        .replace("\u200b", "")
-    )
-    content = content.replace("<span></span>", "")
-
-    return EscapeQuotes(content)
 
 
 def EscapeQuotes(str):
@@ -187,12 +98,13 @@ currentDirectory = os.path.dirname(
 urlFile = open(os.path.join(currentDirectory, "hrefs.txt"), "r")
 linksToCrawl = []
 for line in urlFile:
-    linksToCrawl.append(line.rstrip())
+    if (line.find('#') == -1):
+        linksToCrawl.append(line.rstrip())
 
 urlFile.close()
 
 queriesOutput = open(os.path.join(
-    currentDirectory, "queries.sql"), "w+", encoding="utf-8")
+    currentDirectory, "crauler-result/queries.sql"), "w+", encoding="utf-8")
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--headless")
@@ -379,7 +291,8 @@ for link in tqdm(linksToCrawl):
 
         if len(filesLinks) > 0:
             for i in range(len(filesLinks)):
-                currentFile = get_file(filesLinks[i], slug(postTitle), downloads_folder)
+                currentFile = get_file(
+                    filesLinks[i], slug(postTitle), downloads_folder)
                 if currentFile:
                     download_id += 1
                     download_list.append(download_id)
@@ -431,7 +344,7 @@ VALUES (
   '{EscapeQuotes(postTitle).title()}',
   '{get_image(postImage, slug(postTitle), images_folder, page, True)}',
   '{CreateDrescription(postTitle)}',
-  '{EscapeQuotes(ClearTags(postContentImages))}',
+  '{EscapeQuotes(clear_tags(postContentImages))}',
   '{postDate}',
   '{','.join(map(str, download_list))}',
   2
