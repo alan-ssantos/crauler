@@ -16,8 +16,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
 from utils.slug import slug
-from utils.get_file import get_file, get_image
-from utils.html_handler import clear_tags
+from utils.file_handler import get_file, get_image
+from utils.content_handler import clear_tags
 
 images_folder = f"crauler-result/imagens-{str(int(time.time()))}"
 if not os.path.exists(images_folder):
