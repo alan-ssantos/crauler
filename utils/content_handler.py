@@ -1,4 +1,8 @@
 import re
+from typing import Union
+
+from utils.file_handler import get_image
+from utils.slug import slug
 
 
 patterns_replaces = [
@@ -33,13 +37,61 @@ patterns_replaces = [
     (r"<p> </p>", ""),
     (r"\u200b", ""),
     (r"<span></span>", ""),
-    (r"<form[^>]*>(.|\n)*</form>", "")
+    (r"<form[^>]*>(.|\n)*</form>", ""),
+    (r"<noscript>(.*?)</noscript>", ""),
+    (r"(<\/?div>){1,}", ""),
 ]
 
 
-def clear_tags(content: str):
+def clear_tags(content: str) -> str:
     output = content
     for pattern, replace in patterns_replaces:
         output = re.sub(pattern, replace, output)
 
     return output
+
+
+def format_date(year: Union[str, int], month: Union[str, int], day: Union[str, int]) -> str:
+    month_abbreviations = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+
+    if type(month) is str:
+        month = month_abbreviations.index((month if len(month) <= 3 else month[:3]).lower()) + 1
+    month = ("0" if month < 10 else "") + str(month)
+
+    return f"{year}-{month}-{day} 00:00:00"
+
+
+def content_images(content, images, image_slug, images_folder):
+    local_images = []
+    for image in images:
+        local_images.append(get_image(image, image_slug, images_folder))
+
+    original_images = re.findall("<img[^>]+>", content)
+    print(f"{len(local_images)}/{len(original_images)} replaced images in content.")
+
+    for i, image in enumerate(original_images):
+        image_tag = f'<img src="doutor/uploads/{local_images[i]}" title="{image_slug}" alt="{image_slug}">'
+        content = content.replace(image, image_tag)
+
+    return content
+
+
+def create_description(title: str, base_description: str) -> str:
+    description = escape_quotes(title) + " - " + escape_quotes(base_description)
+    return description[:145] + "... Saiba mais."
+
+
+def escape_quotes(text: str) -> str:
+    escaped_text = text.replace("'", "&#39;")
+    # escaped_text = text.replace('"', "&#34;")
+
+    return escaped_text
+
+
+def split_pop_strip(text: str) -> str:
+    return text.split(":").pop().strip()
+
+
+def set_bold(text: str) -> str:
+    text = text.split(":")
+    return f'<p><span class="font-weight-bold">{text[0]}: </span>{text[1]}</p>'

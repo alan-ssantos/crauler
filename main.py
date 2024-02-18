@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import By
 
 from utils.slug import slug
 from utils.file_handler import get_file, get_image
-from utils.content_handler import clear_tags
+from utils.content_handler import clear_tags, content_images, create_description, escape_quotes
 
 images_folder = f"crauler-result/imagens-{str(int(time.time()))}"
 if not os.path.exists(images_folder):
@@ -35,77 +35,6 @@ opener.addheaders = [
     )
 ]
 urllib.request.install_opener(opener)
-
-
-def CreateDrescription(title):
-    description = EscapeQuotes(title) + " - " + EscapeQuotes(baseDescription)
-    return description[:145] + "... Saiba mais."
-
-
-def EscapeQuotes(str):
-    return str.replace("'", "&#39;")  # .replace('"', '&#34;')
-
-
-def SplitPopStrip(str):
-    return str.split(":").pop().strip()
-
-
-# def formatDate(day, month, year):
-#     22 de junho de 2018
-#     monthList = ['jan','fev','mar','abr','maio','jun','jul','ago','set','out','nov','dez']
-#     month = monthList.index(month) + 1
-#     month = ('0' if month < 10 else '') + str(month)
-#     return f'{year}-{month}-{day} 00:00:00'
-
-
-def formatDate(date):
-    monthList = [
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    ]
-    day = date[0]
-    # month = monthList.index(date[1].lower()) + 1
-    # month = ('0' if month < 10 else '') + str(month)
-    month = date[1]
-    year = date[2]
-    return f"{year}-{month}-{day} 00:00:00"
-
-
-def SetBold(value):
-    value = value.split(":")
-    return f'<p><span class="font-weight-bold">{value[0]}: </span>{value[1]}</p>'
-
-
-def ContentToLocal(content, images, title):
-    contentImagesSrc = []
-    for image in images:
-        contentImagesSrc.append(get_image(image, slug(title), images_folder))
-        # try:
-        #     contentImagesSrc.append(GetLocalImage(image, title, folder = 'produto'))
-        # except:
-        #     contentImagesSrc.append(GetLocalImage(image.attrs['srcset'].split(" ")[0], title, folder = 'produto'))
-
-    content = re.sub("<noscript>(.*?)</noscript>", "", content)
-    originalImages = re.findall("<img[^\>]+>", content)
-
-    print("Original - " + str(len(originalImages)))
-    print("Images - " + str(len(images)))
-    for i, image in enumerate(originalImages):
-        content = content.replace(
-            image, f'<img src="doutor/uploads/{contentImagesSrc[i]} title="{title}" alt="{title}">'
-        )
-
-    return content
 
 
 currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -128,7 +57,7 @@ driver = webdriver.Chrome(service=Service(), options=chrome_options)
 # driver.maximize_window()
 
 baseURL = ""
-baseDescription = "Os rodízios Squadroni permitem movimentação suave de móveis, além de emprestar a beleza de seu design aos itens de mobiliário, mesmo quando estáticos..."
+base_description = "Os rodízios Squadroni permitem movimentação suave de móveis, além de emprestar a beleza de seu design aos itens de mobiliário, mesmo quando estáticos..."
 page = "produtos"
 categoryId = 1
 productId = 1
@@ -136,13 +65,6 @@ productId = 1
 downloadCat = 5
 download_id = 1
 download_list = []
-
-
-def encontrar_indice(entrada, alvo):
-    for i, elemento in enumerate(entrada):
-        if elemento == alvo:
-            return i + 2
-    return -1
 
 
 for link in tqdm(linksToCrawl):
@@ -239,21 +161,22 @@ for link in tqdm(linksToCrawl):
         print("Content not found")
 
     # ---- IMAGENS DENTRO DO CONTEÚDO DO PRODUTO
-    postContentImages = False
+    post_content_images = False
     try:
-        postContentImagesSelector = WebDriverWait(driver, 10).until(
+        images_in_content = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content img"))
         )
 
-        postContentImages = []
-        for images in postContentImagesSelector:
-            postContentImages.append(images.get_attribute("src"))
-        # print(postContentImages)
+        post_content_images = []
+        for images in images_in_content:
+            post_content_images.append(images.get_attribute("src"))
     except:
         print("Images in content not found")
 
-    postContentImages = (
-        postContent if not postContentImages else ContentToLocal(postContent, postContentImages, postTitle)
+    post_content_images = (
+        postContent
+        if not post_content_images
+        else content_images(postContent, post_content_images, slug(postTitle), images_folder)
     )
 
     # ---- BREVE DESCRIÇÃO DO PRODUTO
@@ -366,10 +289,10 @@ VALUES (
   2,
   {categoryId},
   '{slug(postTitle)}',
-  '{EscapeQuotes(postTitle).title()}',
+  '{escape_quotes(postTitle).title()}',
   '{get_image(postImage, slug(postTitle), images_folder, page, True)}',
-  '{CreateDrescription(postTitle)}',
-  '{EscapeQuotes(clear_tags(postContentImages))}',
+  '{create_description(postTitle, base_description)}',
+  '{escape_quotes(clear_tags(post_content_images))}',
   '{postDate}',
   '{','.join(map(str, download_list))}',
   2
