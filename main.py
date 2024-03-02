@@ -3,21 +3,19 @@
 import urllib.request
 import urllib.parse
 from tqdm import tqdm
-import re
 import time
 import os
 import inspect
-from datetime import datetime
 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
+from controllers.content_controller import *
+
 from utils.slug import slug
 from utils.file_handler import get_file, get_image
-from utils.content_handler import clear_tags, content_images, create_description, escape_quotes
+from utils.content_handler import clear_tags, create_description, escape_quotes
 
 images_folder = f"crauler-result/imagens-{str(int(time.time()))}"
 if not os.path.exists(images_folder):
@@ -48,21 +46,16 @@ urlFile.close()
 
 queriesOutput = open(os.path.join(currentDirectory, "crauler-result/queries.sql"), "w+", encoding="utf-8")
 
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--log-level=3")
-driver = webdriver.Chrome(service=Service(), options=chrome_options)
-
-# driver.set_window_position(0, 0)
-# driver.maximize_window()
-
 baseURL = ""
 base_description = "Os rodízios Squadroni permitem movimentação suave de móveis, além de emprestar a beleza de seu design aos itens de mobiliário, mesmo quando estáticos..."
 page = "produtos"
+
 categoryId = 1
 productId = 1
-# categories = []
-downloadCat = 5
+
+categories = []
+
+download_category_id = 5
 download_id = 1
 download_list = []
 
@@ -83,115 +76,32 @@ for link in tqdm(linksToCrawl):
         print("Acessando link")
         driver.get(link)
 
-    # ---- CAPA DO PRODUTO
-    try:
-        postImage = (
-            WebDriverWait(driver, 30)
-            .until(EC.presence_of_element_located((By.CSS_SELECTOR, ".project-slider img.preload-me")))
-            .get_attribute("src")
-            .strip()
-        )
-
-        postImage = re.sub(r"\?.*", "", postImage)
-        print(postImage)
-    except:
-        postImage = "https://producao.mpitemporario.com.br/sig_site_base_full_beta/doutor/images/default.png"
-        print("Cover not found")
-
     # ---- TÍTULO DO PRODUTO
-    try:
-        postTitle = (
-            WebDriverWait(driver, 10)
-            .until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1.entry-title")))
-            .get_attribute("innerText")
-            .strip()
-        )
-    except:
-        print("Title not found")
+    page_title = get_page_title("h1.entry-title")
+
+    # ---- SLUG DA PÁGINA
+    page_slug = slug(page_title)
+
+    # ---- CAPA DO PRODUTO
+    page_cover = get_page_cover(".project-slider img.preload-me")
 
     # ---- PREÇO ANTIGO DO PRODUTO
-    # try:
-    #     oldPrice = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".summary.entry-summary del .woocommerce-Price-amount.amount"))).get_attribute('innerText').strip()
-    #     oldPrice = str.replace(oldPrice, "R$ ", "")
-    #     oldPrice = float(str.replace(oldPrice, ",", "."))
-    # except:
-    #     print('Old Price not found')
+    # old_price = get_old_price(".summary.entry-summary del .woocommerce-Price-amount.amount")
 
     # ---- NOVO PREÇO DO PRODUTO
-    # try:
-    #     newPrice = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".summary.entry-summary ins .woocommerce-Price-amount.amount"))).get_attribute('innerText').strip()
-    #     newPrice = str.replace(newPrice, "R$ ", "")
-    #     newPrice = float(str.replace(newPrice, ",", "."))
-    # except:
-    #     print('Old Price not found')
+    # new_price = get_price(".summary.entry-summary ins .woocommerce-Price-amount.amount")
 
     # ---- CATEGORIA DO PRODUTO
-    # try:
-    #     categ = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
-    #         (By.CSS_SELECTOR, ".product_meta .posted_in a"))).get_attribute('innerText').strip()
-
-    #     categoryId = categories.index(categ) + 2
-
-    #     print("categoria: " + categ)
-    # except:
-    #     print('Category not found')
+    # category = get_page_category(categories, ".product_meta .posted_in a")
 
     # ---- DATA E HORÁRIO DA PUBLICAÇÃO DO PRODUTO
-    try:
-        now = datetime.now()
-        postDate = now.strftime("%Y-%m-%d %H:%M:%S")
-        # postDate = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
-        #     (By.CSS_SELECTOR, ".date-info > .date"))).get_attribute('innerText').strip().split('/')
-        # postDate = f'{postDate[2]}-{postDate[1]}-{postDate[0]} 00:00:00'
-    except:
-        print("Date not found")
+    publish_date = get_publish_date()
 
     # --- CONTEÚDO DO PRODUTO
-    try:
-        postContent = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content > *"))
-        )
-
-        postContentArray = []
-        for descElements in postContent:
-            postContentArray.append(descElements.get_attribute("outerHTML"))
-
-        postContent = "".join(postContentArray)
-    except:
-        print("Content not found")
-
-    # ---- IMAGENS DENTRO DO CONTEÚDO DO PRODUTO
-    post_content_images = False
-    try:
-        images_in_content = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content img"))
-        )
-
-        post_content_images = []
-        for images in images_in_content:
-            post_content_images.append(images.get_attribute("src"))
-    except:
-        print("Images in content not found")
-
-    post_content_images = (
-        postContent
-        if not post_content_images
-        else content_images(postContent, post_content_images, slug(postTitle), images_folder)
-    )
+    page_content = get_page_content(".project-content > *", page_title, images_folder)
 
     # ---- BREVE DESCRIÇÃO DO PRODUTO
-    try:
-        breveDescriptionContent = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ""))
-        )
-
-        breveDescriptionContentArray = []
-        for descElements in breveDescriptionContent:
-            breveDescriptionContentArray.append(descElements.get_attribute("outerHTML"))
-
-        breveContent = "".join(breveDescriptionContentArray)
-    except:
-        print("breveDescription not found")
+    page_short_description = get_page_short_description(".project-content > *")
 
     # ---- GALERIA DE IMAGENS
     # try:
@@ -201,7 +111,7 @@ for link in tqdm(linksToCrawl):
 
     #     print(f"Images on gallery: {len(prodGallery)}")
     #     if len(prodGallery) == 0:
-    #         imagesSrc = [postImage]
+    #         imagesSrc = [page_cover]
     #     else:
     #         imagesSrc = []
 
@@ -239,7 +149,7 @@ for link in tqdm(linksToCrawl):
 
         if len(filesLinks) > 0:
             for i in range(len(filesLinks)):
-                currentFile = get_file(filesLinks[i], slug(postTitle), downloads_folder)
+                currentFile = get_file(filesLinks[i], page_slug, downloads_folder)
                 if currentFile:
                     download_id += 1
                     download_list.append(download_id)
@@ -258,12 +168,12 @@ for link in tqdm(linksToCrawl):
                             VALUES (
                             {download_id},
                             2,
-                            {downloadCat},
-                            '{slug('Catálogo: '+postTitle)}',
-                            '{'Catálogo: '+postTitle}',
-                            '{'Catálogo: '+postTitle}',
+                            {download_category_id},
+                            '{slug('Catálogo: '+page_title)}',
+                            '{'Catálogo: '+page_title}',
+                            '{'Catálogo: '+page_title}',
                             '{currentFile}',
-                            '{postDate}',
+                            '{publish_date}',
                             2
                           );\n"""
                     )
@@ -288,12 +198,12 @@ INSERT INTO `dr_produtos`(
 VALUES (
   2,
   {categoryId},
-  '{slug(postTitle)}',
-  '{escape_quotes(postTitle).title()}',
-  '{get_image(postImage, slug(postTitle), images_folder, page, True)}',
-  '{create_description(postTitle, base_description)}',
-  '{escape_quotes(clear_tags(post_content_images))}',
-  '{postDate}',
+  '{page_slug}',
+  '{escape_quotes(page_title).title()}',
+  '{get_image(page_cover, page_slug, images_folder, page, True)}',
+  '{create_description(page_title, base_description)}',
+  '{escape_quotes(clear_tags(page_content))}',
+  '{publish_date}',
   '{','.join(map(str, download_list))}',
   2
   );\n

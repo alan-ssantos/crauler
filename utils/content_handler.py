@@ -12,7 +12,7 @@ patterns_replaces = [
     # (r'(&#[0-9a-zA-z]*\;)', ''),
     # (r'<[^/>][^>]*><\/[^>]+>', ''),
     # (r'<[^>!(td|i)][^>]*><\/[^>]+>', ''),
-    (r"<figure.*>", ""),
+    (r"<figure[^>]*>", ""),
     (r"<\/figure>", ""),
     (r"\r?\n|\r|\t", ""),
     (r"</img>", ""),
@@ -61,17 +61,17 @@ def format_date(year: Union[str, int], month: Union[str, int], day: Union[str, i
     return f"{year}-{month}-{day} 00:00:00"
 
 
-def content_images(content, images, image_slug, images_folder):
+def content_images(content, images, image_title, images_folder):
     local_images = []
     for image in images:
-        local_images.append(get_image(image, image_slug, images_folder))
+        local_images.append(get_image(image, slug(image_title), images_folder))
 
-    original_images = re.findall("<img[^>]+>", content)
+    original_images = re.findall("<img[^>]*>", content)
     print(f"{len(local_images)}/{len(original_images)} replaced images in content.")
 
     for i, image in enumerate(original_images):
-        image_tag = f'<img src="doutor/uploads/{local_images[i]}" title="{image_slug}" alt="{image_slug}">'
-        content = content.replace(image, image_tag)
+        local_image = f'<img src="doutor/uploads/{local_images[i]}" alt="{image_title}" title="{image_title}">'
+        content = content.replace(image, local_image)
 
     return content
 
