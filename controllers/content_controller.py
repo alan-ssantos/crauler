@@ -1,35 +1,14 @@
 import re
 from datetime import datetime
-from typing import List
-
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
+from adapters.chrome_web_driver import ChromeWebDriver
 from utils.content_handler import content_images, format_date
 
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--log-level=3")
-driver = webdriver.Chrome(service=Service(), options=chrome_options)
 
-
-def find_element(selector: str, timeout: int = 10):
-    element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-    return element
-
-
-def find_elements(selector: str, timeout: int = 10):
-    element = WebDriverWait(driver, timeout).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector)))
-    return element
-
-
-def get_page_cover(selector: str) -> str:
+def get_page_cover(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
-        page_cover = find_element(selector).get_attribute("src").strip()
+        page_cover = chrome_driver.find_element(selector).get_attribute("src").strip()
 
         # Remover os parâmetros de consulta na URL
         page_cover = re.sub(r"\?.*", "", page_cover)
@@ -43,9 +22,9 @@ def get_page_cover(selector: str) -> str:
     return page_cover
 
 
-def get_page_title(selector: str) -> str:
+def get_page_title(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
-        page_title = find_element(selector).get_attribute("innerText").strip()
+        page_title = chrome_driver.find_element(selector).get_attribute("innerText").strip()
     except TimeoutException:
         print("Title not found (TimeoutException)")
     except Exception as exception:
@@ -54,9 +33,9 @@ def get_page_title(selector: str) -> str:
     return page_title
 
 
-def get_old_price(selector: str) -> str:
+def get_old_price(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
-        old_price = find_element(selector).get_attribute("innerText").strip()
+        old_price = chrome_driver.find_element(selector).get_attribute("innerText").strip()
         old_price = str.replace(old_price, "R$ ", "")
         old_price = float(str.replace(old_price, ",", "."))
     except TimeoutException:
@@ -67,9 +46,9 @@ def get_old_price(selector: str) -> str:
     return old_price
 
 
-def get_price(selector: str) -> str:
+def get_price(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
-        new_price = find_element(selector).get_attribute("innerText").strip()
+        new_price = chrome_driver.find_element(selector).get_attribute("innerText").strip()
         new_price = str.replace(new_price, "R$ ", "")
         new_price = float(str.replace(new_price, ",", "."))
     except TimeoutException:
@@ -80,9 +59,9 @@ def get_price(selector: str) -> str:
     return new_price
 
 
-def get_page_category(categories: list[str], selector: str, step: int = 2):
+def get_page_category(chrome_driver: ChromeWebDriver, categories: list[str], selector: str, step: int = 2):
     try:
-        category = find_element(selector).get_attribute("innerText").strip()
+        category = chrome_driver.find_element(selector).get_attribute("innerText").strip()
         category_id = categories.index(category) + step
     except TimeoutException:
         print("Category not found (TimeoutException)")
@@ -92,13 +71,13 @@ def get_page_category(categories: list[str], selector: str, step: int = 2):
     return category_id
 
 
-def get_publish_date(selector: str | None = None, separator: str = "/") -> str:
+def get_publish_date(chrome_driver: ChromeWebDriver, selector: str | None = None, separator: str = "/") -> str:
     try:
         if not selector:
             now = datetime.now()
             publish_date = now.strftime("%Y-%m-%d %H:%M:%S")
         else:
-            publish_date = find_element(selector).get_attribute("innerText").strip()
+            publish_date = chrome_driver.find_element(selector).get_attribute("innerText").strip()
             publish_date = publish_date.split(separator)
             publish_date = format_date(publish_date[2], publish_date[1], publish_date[0])
     except TimeoutException:
@@ -109,9 +88,9 @@ def get_publish_date(selector: str | None = None, separator: str = "/") -> str:
     return publish_date
 
 
-def get_page_content(selector: str, page_slug: str, images_folder: str) -> str:
+def get_page_content(chrome_driver: ChromeWebDriver, selector: str, page_slug: str, images_folder: str) -> str:
     try:
-        page_content = find_elements(selector)
+        page_content = chrome_driver.find_elements(selector)
 
         content_elements = []
         for image_element in page_content:
@@ -139,9 +118,9 @@ def get_page_content(selector: str, page_slug: str, images_folder: str) -> str:
     return page_content
 
 
-def get_page_short_description(selector: str) -> str:
+def get_page_short_description(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
-        short_description = find_elements(selector)
+        short_description = chrome_driver.find_elements(selector)
 
         content_elements = []
         for element in short_description:

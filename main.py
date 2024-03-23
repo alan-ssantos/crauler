@@ -7,10 +7,7 @@ import time
 import os
 import inspect
 
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-
+from adapters.chrome_web_driver import ChromeWebDriver
 from controllers.content_controller import *
 
 from utils.slug import slug
@@ -59,12 +56,13 @@ download_category_id = 5
 download_id = 1
 download_list = []
 
+chrome_driver = ChromeWebDriver()
 
 for link in tqdm(linksToCrawl):
     print(link)
 
     try:
-        driver.get(link)
+        chrome_driver.driver.get(link)
     except:
         print("Caiu a conexão")
         print("Tentando novamente em 3 segundos...")
@@ -74,16 +72,16 @@ for link in tqdm(linksToCrawl):
         print("Tentando novamente em 1 segundos...")
         time.sleep(1)
         print("Acessando link")
-        driver.get(link)
+        chrome_driver.driver.get(link)
 
     # ---- TÍTULO DO PRODUTO
-    page_title = get_page_title("h1.entry-title")
+    page_title = get_page_title(chrome_driver, "h1.entry-title")
 
     # ---- SLUG DA PÁGINA
     page_slug = slug(page_title)
 
     # ---- CAPA DO PRODUTO
-    page_cover = get_page_cover(".project-slider img.preload-me")
+    page_cover = get_page_cover(chrome_driver, ".project-slider img.preload-me")
 
     # ---- PREÇO ANTIGO DO PRODUTO
     # old_price = get_old_price(".summary.entry-summary del .woocommerce-Price-amount.amount")
@@ -95,13 +93,13 @@ for link in tqdm(linksToCrawl):
     # category = get_page_category(categories, ".product_meta .posted_in a")
 
     # ---- DATA E HORÁRIO DA PUBLICAÇÃO DO PRODUTO
-    publish_date = get_publish_date()
+    publish_date = get_publish_date(chrome_driver)
 
     # --- CONTEÚDO DO PRODUTO
-    page_content = get_page_content(".project-content > *", page_title, images_folder)
+    page_content = get_page_content(chrome_driver, ".project-content > *", page_title, images_folder)
 
     # ---- BREVE DESCRIÇÃO DO PRODUTO
-    page_short_description = get_page_short_description(".project-content > *")
+    page_short_description = get_page_short_description(chrome_driver, ".project-content > *")
 
     # ---- GALERIA DE IMAGENS
     # try:
@@ -139,9 +137,7 @@ for link in tqdm(linksToCrawl):
 
     # ---- DOWNLOADS
     try:
-        files = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".project-content a[href*='.pdf']"))
-        )
+        files = chrome_driver.find_elements(".project-content a[href*='.pdf']")
         filesLinks = []
 
         for file in files:
@@ -212,5 +208,5 @@ VALUES (
     download_list.clear()
 
 
-driver.quit()
+chrome_driver.close()
 queriesOutput.close()
