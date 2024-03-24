@@ -9,6 +9,7 @@ import inspect
 
 from adapters.chrome_web_driver import ChromeWebDriver
 from controllers.content_controller import *
+from controllers.gallery_controller import get_gallery_images
 
 from utils.slug import slug
 from utils.file_handler import get_file, get_image
@@ -102,38 +103,7 @@ for link in tqdm(linksToCrawl):
     page_short_description = get_page_short_description(chrome_driver, ".project-content > *")
 
     # ---- GALERIA DE IMAGENS
-    # try:
-    #     prodGallery = WebDriverWait(driver, 10).until(
-    #         EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".sp-thumbs a")))
-    #     prodGallery.pop(0)
-
-    #     print(f"Images on gallery: {len(prodGallery)}")
-    #     if len(prodGallery) == 0:
-    #         imagesSrc = [page_cover]
-    #     else:
-    #         imagesSrc = []
-
-    #     for image in prodGallery:
-    #         imagesSrc.append(image.get_attribute("href").strip())
-
-    #     if len(imagesSrc) > 0:
-    #         for i in range(len(imagesSrc)):
-    #             currentImage = GetLocalImage(imagesSrc[i], postTitle)
-    #             if currentImage:
-    #                 queriesOutput.write(f'''
-    #               INSERT INTO app_gallery (
-    #                 user_empresa,
-    #                 cat_parent,
-    #                 gallery_rel,
-    #                 gallery_file)
-    #               VALUES (2,
-    #                 {categoryId},
-    #                 {productId},
-    #                 '{currentImage}');\n
-    #               ''')
-    # except Exception as e:
-    #     print(f"Exception:\n{e}")
-    #     print("No gallery found in product")
+    gallery = get_gallery_images(chrome_driver, "", categoryId, productId, page_slug, page_cover, images_folder)
 
     # ---- DOWNLOADS
     try:
@@ -205,6 +175,8 @@ VALUES (
   );\n
 """
     )
+    if gallery:
+        queriesOutput.write(gallery)
     download_list.clear()
 
 
