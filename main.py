@@ -1,7 +1,5 @@
 # original project by datCloud
 
-import urllib.request
-import urllib.parse
 from tqdm import tqdm
 import time
 import os
@@ -9,10 +7,11 @@ import inspect
 
 from adapters.chrome_web_driver import ChromeWebDriver
 from controllers.content_controller import *
+from controllers.downloads_controller import get_downloads
 from controllers.gallery_controller import get_gallery_images
 
 from utils.slug import slug
-from utils.file_handler import get_file, get_image
+from utils.file_handler import get_image
 from utils.content_handler import clear_tags, create_description, escape_quotes
 
 images_folder = f"crauler-result/imagens-{str(int(time.time()))}"
@@ -22,16 +21,6 @@ if not os.path.exists(images_folder):
 downloads_folder = f"crauler-result/downloads-{str(int(time.time()))}"
 if not os.path.exists(downloads_folder):
     os.makedirs(downloads_folder)
-
-opener = urllib.request.build_opener()
-opener.addheaders = [
-    (
-        "User-agent",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
-    )
-]
-urllib.request.install_opener(opener)
-
 
 currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 urlFile = open(os.path.join(currentDirectory, "hrefs.txt"), "r")
@@ -54,8 +43,7 @@ productId = 1
 categories = []
 
 download_category_id = 5
-download_id = 1
-download_list = []
+current_download_id = 1
 
 chrome_driver = ChromeWebDriver()
 
@@ -94,7 +82,7 @@ for link in tqdm(linksToCrawl):
     # category = get_page_category(categories, ".product_meta .posted_in a")
 
     # ---- DATA E HORÁRIO DA PUBLICAÇÃO DO PRODUTO
-    publish_date = get_publish_date(chrome_driver)
+    publish_date = get_publish_date(chrome_driver, None)
 
     # --- CONTEÚDO DO PRODUTO
     page_content = get_page_content(chrome_driver, ".project-content > *", page_title, images_folder)
@@ -106,46 +94,16 @@ for link in tqdm(linksToCrawl):
     gallery = get_gallery_images(chrome_driver, "", categoryId, productId, page_slug, page_cover, images_folder)
 
     # ---- DOWNLOADS
-    try:
-        files = chrome_driver.find_elements(".project-content a[href*='.pdf']")
-        filesLinks = []
-
-        for file in files:
-            filesLinks.append(file.get_attribute("href").strip())
-
-        if len(filesLinks) > 0:
-            for i in range(len(filesLinks)):
-                currentFile = get_file(filesLinks[i], page_slug, downloads_folder)
-                if currentFile:
-                    download_id += 1
-                    download_list.append(download_id)
-                    queriesOutput.write(
-                        f"""INSERT INTO `dr_downloads` (
-                            `dow_id`,
-                            `user_empresa`,
-                            `cat_parent`,
-                            `dow_name`,
-                            `dow_title`,
-                            `dow_description`,
-                            `dow_file`,
-                            `dow_date`,
-                            `dow_status`
-                          )
-                            VALUES (
-                            {download_id},
-                            2,
-                            {download_category_id},
-                            '{slug('Catálogo: '+page_title)}',
-                            '{'Catálogo: '+page_title}',
-                            '{'Catálogo: '+page_title}',
-                            '{currentFile}',
-                            '{publish_date}',
-                            2
-                          );\n"""
-                    )
-    except Exception as e:
-        print(f"Exception:\n{e}")
-        print("Nenhum arquivo para download foi encontrado no produto.")
+    downloads, last_download_id, download_list = get_downloads(
+        chrome_driver,
+        ".project-content a[href*='.pdf']",
+        current_download_id,
+        download_category_id,
+        downloads_folder,
+        page_title,
+        publish_date,
+    )
+    current_download_id = last_download_id
 
     queriesOutput.write(
         f"""
@@ -170,15 +128,15 @@ VALUES (
   '{create_description(page_title, base_description)}',
   '{escape_quotes(clear_tags(page_content))}',
   '{publish_date}',
-  '{','.join(map(str, download_list))}',
+  '{download_list}',
   2
   );\n
 """
     )
     if gallery:
         queriesOutput.write(gallery)
-    download_list.clear()
-
+    if downloads:
+        queriesOutput.write(downloads)
 
 chrome_driver.close()
 queriesOutput.close()
