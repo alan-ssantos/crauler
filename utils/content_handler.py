@@ -40,6 +40,16 @@ patterns_replaces = [
     (r"<form[^>]*>(.|\n)*</form>", ""),
     (r"<noscript>(.*?)</noscript>", ""),
     (r"(<\/?div>){1,}", ""),
+    (r"<ul>", '<ul class="list">'),
+    # Adicionados para o site Rep Relógios
+    (r"<span><i aria-hidden=\"true\"></i></span>", ""),
+    (r"<span><span>", ""),
+    (r"<\/span><\/span>", ""),
+    (r"&nbsp;", " "),
+    (r"<span>Download(.*?)</span>", ""),
+    (r"<li><span>", "<li>"),
+    (r"<\/span><\/li>", "</li>"),
+    (r"<p></p>", ""),
 ]
 
 

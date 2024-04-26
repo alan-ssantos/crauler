@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, InvalidSelectorException
 
 from adapters.chrome_web_driver import ChromeWebDriver
 from utils.content_handler import content_images, format_date
@@ -120,6 +120,9 @@ def get_page_content(chrome_driver: ChromeWebDriver, selector: str, page_slug: s
 
 def get_page_short_description(chrome_driver: ChromeWebDriver, selector: str) -> str:
     try:
+        if selector is None:
+            return ""
+
         short_description = chrome_driver.find_elements(selector)
 
         content_elements = []
@@ -127,9 +130,10 @@ def get_page_short_description(chrome_driver: ChromeWebDriver, selector: str) ->
             content_elements.append(element.get_attribute("outerHTML"))
 
         short_description = "".join(content_elements)
+        return short_description
+    except InvalidSelectorException:
+        print("Short description not found (Invalid Selector)")
     except TimeoutException:
         print("Short description not found (TimeoutException)")
     except Exception as exception:
         print(f"Short description not found, an unexpected error occurred: {exception}")
-
-    return short_description

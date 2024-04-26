@@ -7,6 +7,7 @@ from selenium.common.exceptions import TimeoutException, InvalidSelectorExceptio
 def get_downloads(
     chrome_driver: ChromeWebDriver,
     selector: str,
+    user_id: int,
     current_download_id: int,
     download_category_id: int,
     downloads_folder: str,
@@ -25,11 +26,11 @@ def get_downloads(
         downloads_query = ""
         if len(file_urls) > 0:
             for url in range(len(file_urls)):
-                current_file = get_file(file_urls[url], slug(page_title), downloads_folder)
+                current_file = get_file(file_urls[url], slug(page_title), user_id, downloads_folder)
                 if current_file:
                     current_download_id += 1
                     download_list.append(current_download_id)
-                    downloads_query += f"""INSERT INTO `dr_downloads` (`dow_id`,`user_empresa`,`cat_parent`,`dow_name`,`dow_title`,`dow_description`,`dow_file`,`dow_date`,`dow_status`) VALUES ({current_download_id}, 2, {download_category_id}, '{slug('Catálogo: '+page_title)}','{'Catálogo: '+page_title}','{'Catálogo: '+page_title}','{current_file}','{publish_date}',2);\n"""
+                    downloads_query += f"""INSERT INTO `dr_downloads` (`dow_id`,`user_empresa`,`cat_parent`,`dow_name`,`dow_title`,`dow_description`,`dow_file`,`dow_date`,`dow_status`) VALUES ({current_download_id}, {user_id}, {download_category_id}, '{slug('Manual: '+page_title)}','{'Manual: '+page_title}','{'Manual: '+page_title}','{current_file}','{publish_date}',2);\n"""
 
         download_list_str = ",".join(map(str, download_list))
         return downloads_query, current_download_id, download_list_str

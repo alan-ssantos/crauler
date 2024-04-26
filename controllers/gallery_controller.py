@@ -7,6 +7,7 @@ from utils.file_handler import get_image
 def get_gallery_images(
     chrome_driver: ChromeWebDriver,
     selector: str,
+    user_id: int,
     category_id: int,
     product_id: int,
     page_slug: str,
@@ -32,9 +33,9 @@ def get_gallery_images(
         gallery_query = ""
         if len(images) > 0:
             for i in range(len(images)):
-                current_image = get_image(images[i], page_slug, save_folder)
+                current_image = get_image(images[i], page_slug, save_folder, user_id=user_id)
                 if current_image:
-                    gallery_query += f"INSERT INTO app_gallery (user_empresa, cat_parent,gallery_rel, gallery_file) VALUES (2, {category_id}, {product_id}, '{current_image}');\n"
+                    gallery_query += f"INSERT INTO app_gallery (user_empresa, cat_parent,gallery_rel, gallery_file) VALUES ({user_id}, {category_id}, {product_id}, '{current_image}');\n"
 
         return gallery_query
     except InvalidSelectorException:
